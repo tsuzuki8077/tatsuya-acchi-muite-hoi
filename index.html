@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>ただのたつやはそっち向け</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a1e;font-family:'M PLUS Rounded 1c',sans-serif;user-select:none;-webkit-user-select:none}
+
+.screen{display:none;width:100%;height:100%;position:absolute;top:0;left:0;flex-direction:column;align-items:center}
+.screen.active{display:flex}
+
+/* ===== TITLE ===== */
+#title-screen{background:linear-gradient(180deg,#0d0025 0%,#1a0a3a 40%,#2d1060 100%);justify-content:center;gap:12px}
+#title-screen h1{font-size:clamp(20px,5.5vw,36px);color:#fff;text-align:center;line-height:1.4;text-shadow:0 0 25px rgba(200,100,255,0.7)}
+#title-screen h1 b{color:#ffe033;font-size:130%}
+#title-face{width:clamp(110px,35vw,180px);height:clamp(110px,35vw,180px);border-radius:50%;object-fit:cover;border:3px solid #ffe033;box-shadow:0 0 30px rgba(255,224,51,0.35);animation:tb 2.5s ease-in-out infinite}
+@keyframes tb{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.06) rotate(2deg)}}
+.title-sub{color:#bbb;font-size:13px;margin-top:6px}
+#nick-input{background:rgba(255,255,255,0.08);border:2px solid #ffe033;color:#fff;font-size:17px;padding:10px 18px;border-radius:30px;text-align:center;width:240px;font-family:inherit;outline:none}
+#nick-input::placeholder{color:rgba(255,255,255,0.25)}
+#start-btn{margin-top:10px;background:linear-gradient(180deg,#ff5522,#cc2200);color:#fff;border:none;padding:15px 48px;font-size:21px;border-radius:50px;cursor:pointer;font-family:inherit;font-weight:900;box-shadow:0 5px 20px rgba(255,40,0,0.35);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.how-to{color:#aaa;font-size:11px;margin-top:14px;text-align:center;line-height:1.6;max-width:300px}
+.how-to b{color:#ffe033}
+
+/* ===== GAME ===== */
+#game-screen{background:linear-gradient(180deg,#080820 0%,#12123a 100%)}
+
+#hud{position:absolute;top:0;left:0;width:100%;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;z-index:10}
+.hud-box{background:rgba(0,0,0,0.55);border:1px solid rgba(255,224,51,0.25);padding:3px 10px;border-radius:16px;color:#fff;font-size:12px}
+.hud-box .v{color:#ffe033;font-weight:900;font-size:15px}
+
+#hp-wrap{position:absolute;top:42px;left:12px;right:12px;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;z-index:10;overflow:hidden}
+#hp-bar{height:100%;background:linear-gradient(90deg,#ff3366,#ff6633,#ffe033);border-radius:3px;transition:width .5s;width:0%}
+
+/* Timer */
+#timer-box{position:absolute;top:54px;right:12px;z-index:10}
+#timer-ring{width:52px;height:52px;position:relative}
+#timer-ring svg{transform:rotate(-90deg)}
+#timer-ring circle{fill:none;stroke-width:4}
+.t-bg{stroke:rgba(255,255,255,0.08)}
+.t-fg{stroke:#ffe033;stroke-linecap:round;transition:stroke-dashoffset .1s linear}
+#timer-num{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:18px;font-weight:900}
+
+/* Role indicator */
+#role-bar{position:absolute;top:54px;left:12px;z-index:10;display:none}
+#role-tag{padding:5px 14px;border-radius:20px;font-size:13px;font-weight:900;color:#fff}
+#role-tag.pointer{background:linear-gradient(90deg,#ff5522,#ff8833);box-shadow:0 0 12px rgba(255,85,34,0.4)}
+#role-tag.looker{background:linear-gradient(90deg,#2266ff,#44aaff);box-shadow:0 0 12px rgba(34,102,255,0.4)}
+
+/* Character */
+#char-area{position:relative;flex:1;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#char-wrap{position:relative;width:clamp(160px,50vw,260px);height:clamp(160px,50vw,260px)}
+#char-img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:3px solid rgba(255,224,51,0.35);box-shadow:0 0 35px rgba(80,40,180,0.3);transition:transform .3s}
+#char-img.idle{animation:idle 3s ease-in-out infinite}
+@keyframes idle{0%,100%{transform:translateY(0) rotate(0)}35%{transform:translateY(-3px) rotate(-1deg)}70%{transform:translateY(2px) rotate(1deg)}}
+#char-img.win-a{animation:wa .5s ease forwards}
+@keyframes wa{0%{transform:scale(1)}50%{transform:scale(1.15) rotate(5deg)}100%{transform:scale(1.1) rotate(3deg)}}
+#char-img.lose-a{animation:la .5s ease forwards}
+@keyframes la{0%{transform:scale(1)}50%{transform:scale(.9) rotate(-10deg)}100%{transform:scale(.95) rotate(-5deg)}}
+#char-img.rage{animation:rg .2s ease infinite;border-color:#f33;box-shadow:0 0 35px rgba(255,0,0,0.45)}
+@keyframes rg{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px) rotate(-3deg)}75%{transform:translateX(5px) rotate(3deg)}}
+#char-img.feint{animation:ft .3s ease}
+@keyframes ft{0%{transform:rotate(0)}25%{transform:rotate(-14deg)}55%{transform:rotate(10deg)}100%{transform:rotate(0)}}
+#char-img.think{animation:th .6s ease infinite}
+@keyframes th{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-4px) rotate(2deg)}}
+
+#dir-show{position:absolute;font-size:56px;color:#ffe033;text-shadow:0 0 18px rgba(255,224,0,0.7);pointer-events:none;opacity:0;top:50%;left:50%;transform:translate(-50%,-50%);transition:opacity .2s}
+#dir-show.show{opacity:1}
+
+#blink-ov{position:absolute;top:18%;left:20%;width:60%;height:10%;display:flex;gap:20%;pointer-events:none;opacity:0}
+.blink-e{flex:1;height:100%;background:rgba(0,0,0,0.8);border-radius:50%}
+#blink-ov.blink{animation:bl .15s ease}
+@keyframes bl{0%,100%{opacity:0}50%{opacity:1}}
+
+#talk{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#fff;color:#333;padding:7px 14px;border-radius:18px;font-size:clamp(11px,3.2vw,15px);font-weight:700;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.3);opacity:0;transition:opacity .3s;z-index:15}
+#talk::after{content:'';position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);border-left:7px solid transparent;border-right:7px solid transparent;border-top:7px solid #fff}
+#talk.show{opacity:1}
+
+/* Controls bottom */
+#controls{position:absolute;bottom:12px;left:0;width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:10}
+#prompt-text{color:#ffe033;font-size:15px;font-weight:700;min-height:22px;text-shadow:0 0 8px rgba(255,224,0,0.4)}
+#prompt-text.blink-t{animation:pt 1s ease-in-out infinite}
+@keyframes pt{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Direction grid */
+#dir-grid{display:grid;grid-template-columns:68px 68px 68px;grid-template-rows:68px 68px;gap:7px}
+.dir-btn{width:68px;height:68px;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04));border:2px solid rgba(255,224,51,0.35);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .1s}
+.dir-btn:active{background:rgba(255,224,51,0.25);transform:scale(.9)}
+.dir-btn:disabled{opacity:.25;pointer-events:none}
+#b-up{grid-column:2;grid-row:1}
+#b-left{grid-column:1;grid-row:2}
+#b-down{grid-column:2;grid-row:2}
+#b-right{grid-column:3;grid-row:2}
+
+/* RPS buttons */
+#rps-grid{display:flex;gap:14px}
+.rps-btn{width:76px;height:76px;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03));border:2px solid rgba(255,150,0,0.5);color:#fff;font-size:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .1s}
+.rps-btn:active{background:rgba(255,150,0,0.25);transform:scale(.9)}
+.rps-btn:disabled{opacity:.25;pointer-events:none}
+
+/* Overlays */
+.ov{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:50}
+.ov.active{display:flex}
+
+#cd-ov{background:rgba(0,0,0,0.88)}
+#cd-text{font-size:90px;color:#ffe033;font-weight:900;text-shadow:0 0 35px rgba(255,224,0,0.7)}
+#cd-text.pop{animation:cpop .45s ease}
+@keyframes cpop{0%{transform:scale(2);opacity:0}100%{transform:scale(1);opacity:1}}
+#cd-sub{color:#ccc;font-size:16px;margin-top:8px}
+
+#rps-ov{background:rgba(0,0,0,0.88)}
+#rps-title{color:#ffe033;font-size:clamp(22px,6vw,32px);font-weight:900;margin-bottom:6px;text-shadow:0 0 15px rgba(255,224,0,0.5)}
+#rps-vs{color:#fff;font-size:60px;min-height:80px;margin:10px 0;display:flex;gap:20px;align-items:center}
+#rps-result-text{color:#ffe033;font-size:22px;font-weight:900;min-height:30px;margin-top:10px}
+#rps-sub{color:#aaa;font-size:13px;margin-top:4px;min-height:18px}
+
+#result-ov{background:rgba(0,0,0,0.82)}
+#res-text{font-size:clamp(36px,11vw,72px);font-weight:900;text-shadow:0 0 25px currentColor}
+#res-text.win{color:#ffe033}
+#res-text.lose{color:#ff4455}
+#res-detail{color:#ccc;font-size:16px;margin:8px 0}
+#res-voice{color:#fff;font-size:clamp(15px,4.5vw,22px);margin:12px 0;font-weight:700}
+
+#revival-ov{background:rgba(0,0,0,0.9)}
+#rev-title{color:#ff9900;font-size:22px;font-weight:900;text-shadow:0 0 12px rgba(255,150,0,0.5);margin-bottom:15px}
+#rev-prompt{color:#fff;font-size:16px;margin-bottom:18px}
+#rev-result{color:#ffe033;font-size:24px;font-weight:900;min-height:34px;margin-top:16px}
+
+#go-ov{background:rgba(0,0,0,0.9)}
+#go-ov h2{color:#ff3344;font-size:34px;text-shadow:0 0 18px rgba(255,0,0,0.5)}
+#go-stats{color:#ccc;font-size:15px;margin:14px 0;line-height:2}
+#go-stats .v{color:#ffe033;font-weight:900;font-size:19px}
+#go-title{color:#ff9900;font-size:20px;margin:8px 0;display:none;font-weight:900;text-shadow:0 0 12px rgba(255,150,0,0.5)}
+.re-btn{margin-top:12px;background:linear-gradient(180deg,#ff5522,#cc2200);color:#fff;border:none;padding:13px 38px;font-size:19px;border-radius:50px;cursor:pointer;font-family:inherit;font-weight:900}
+
+/* Effects */
+#flash{position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;opacity:0;pointer-events:none;z-index:100;transition:opacity .05s}
+#flash.on{opacity:.75}
+#confetti-c{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:90;overflow:hidden}
+.conf{position:absolute;top:-12px;animation:cfall linear forwards}
+@keyframes cfall{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+.screen-shake{animation:sk .3s ease}
+@keyframes sk{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+</style>
+</head>
+<body>
+
+<div id="flash"></div>
+<div id="confetti-c"></div>
+
+<!-- TITLE -->
+<div class="screen active" id="title-screen">
+  <h1>ただの<b>たつや</b>は<br>そっち向け</h1>
+  <img id="title-face" src="img/normal.png" alt="tatsuya">
+  <div class="title-sub">▼ ニックネーム ▼</div>
+  <input type="text" id="nick-input" placeholder="ただのたつや" maxlength="12">
+  <button id="start-btn">バトル開始！</button>
+  <div class="how-to">
+    <b>じゃんけん</b>で勝った方が<b>指す側</b><br>
+    負けた方が<b>向く側</b>になる！<br>
+    同じ方向なら<b>指す側の勝ち！</b>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="game-screen">
+  <div id="hud">
+    <div class="hud-box">Lv.<span class="v" id="lv-val">1</span></div>
+    <div class="hud-box"><span id="e-name">ただのたつや</span></div>
+    <div class="hud-box">🔥<span class="v" id="streak-val">0</span></div>
+  </div>
+  <div id="hp-wrap"><div id="hp-bar"></div></div>
+
+  <div id="timer-box">
+    <div id="timer-ring">
+      <svg width="52" height="52" viewBox="0 0 52 52">
+        <circle class="t-bg" cx="26" cy="26" r="22"/>
+        <circle class="t-fg" id="t-prog" cx="26" cy="26" r="22" stroke-dasharray="138.23" stroke-dashoffset="0"/>
+      </svg>
+      <div id="timer-num">10</div>
+    </div>
+  </div>
+
+  <div id="role-bar"><div id="role-tag"></div></div>
+
+  <div id="char-area">
+    <div id="char-wrap">
+      <div id="talk"></div>
+      <img id="char-img" class="idle" src="img/normal.png" alt="tatsuya">
+      <div id="blink-ov"><div class="blink-e"></div><div class="blink-e"></div></div>
+      <div id="dir-show"></div>
+    </div>
+  </div>
+
+  <div id="controls">
+    <div id="prompt-text"></div>
+    <!-- RPS buttons (shown during janken phase) -->
+    <div id="rps-grid" style="display:none">
+      <button class="rps-btn" data-rps="rock">✊</button>
+      <button class="rps-btn" data-rps="scissors">✌️</button>
+      <button class="rps-btn" data-rps="paper">🖐️</button>
+    </div>
+    <!-- Direction buttons (shown during point/look phase) -->
+    <div id="dir-grid" style="display:none">
+      <button class="dir-btn" id="b-up" data-dir="up">↑</button>
+      <button class="dir-btn" id="b-left" data-dir="left">←</button>
+      <button class="dir-btn" id="b-down" data-dir="down">↓</button>
+      <button class="dir-btn" id="b-right" data-dir="right">→</button>
+    </div>
+  </div>
+
+  <!-- RPS Overlay -->
+  <div class="ov" id="rps-ov">
+    <div id="rps-title">じゃんけん…</div>
+    <div id="rps-vs"></div>
+    <div id="rps-result-text"></div>
+    <div id="rps-sub"></div>
+  </div>
+
+  <!-- Countdown Overlay -->
+  <div class="ov" id="cd-ov">
+    <div id="cd-text"></div>
+    <div id="cd-sub"></div>
+  </div>
+
+  <!-- Result Overlay -->
+  <div class="ov" id="result-ov">
+    <div id="res-text"></div>
+    <div id="res-detail"></div>
+    <div id="res-voice"></div>
+  </div>
+
+  <!-- Revival Overlay -->
+  <div class="ov" id="revival-ov">
+    <div id="rev-title"></div>
+    <div id="rev-prompt">じゃんけんで勝て！</div>
+    <div id="rps-grid-rev" style="display:flex;gap:14px">
+      <button class="rps-btn rev-rps" data-rps="rock">✊</button>
+      <button class="rps-btn rev-rps" data-rps="scissors">✌️</button>
+      <button class="rps-btn rev-rps" data-rps="paper">🖐️</button>
+    </div>
+    <div id="rev-result"></div>
+  </div>
+
+  <!-- Game Over -->
+  <div class="ov" id="go-ov">
+    <h2>GAME OVER</h2>
+    <div id="go-stats"></div>
+    <div id="go-title"></div>
+    <button class="re-btn" id="re-btn">もう一回！</button>
+  </div>
+</div>
+
+<script>
+// ===== AUDIO =====
+const AC=window.AudioContext||window.webkitAudioContext;
+let ac;
+function ea(){if(!ac)ac=new AC();if(ac.state==='suspended')ac.resume()}
+function tone(f,d,t,v){if(!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.type=t||'square';o.frequency.value=f;g.gain.setValueAtTime(v||.08,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+(d||.2));o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+(d||.2))}
+function sfxClick(){tone(800,.04,'square',.05)}
+function sfxBeep(){tone(600,.14,'sine',.1)}
+function sfxGo(){tone(900,.28,'sine',.13)}
+function sfxWin(){ea();[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.22,'sine',.1),i*110))}
+function sfxLose(){ea();tone(150,.35,'sawtooth',.1);setTimeout(()=>tone(120,.35,'sawtooth',.08),180)}
+function sfxDrum(){ea();for(let i=0;i<20;i++)setTimeout(()=>{if(!ac)return;const b=ac.createBuffer(1,ac.sampleRate*.03,ac.sampleRate),d=b.getChannelData(0);for(let j=0;j<d.length;j++)d[j]=(Math.random()*2-1)*.14;const s=ac.createBufferSource();s.buffer=b;const g=ac.createGain();g.gain.value=.08+i*.008;s.connect(g);g.connect(ac.destination);s.start()},i*50)}
+function sfxCheer(){ea();if(!ac)return;const b=ac.createBuffer(1,ac.sampleRate*.7,ac.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.sin(Math.PI*i/d.length)*.1;const s=ac.createBufferSource();s.buffer=b;const bp=ac.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2500;bp.Q.value=.3;const g=ac.createGain();g.gain.value=.22;s.connect(bp);bp.connect(g);g.connect(ac.destination);s.start()}
+function sfxRevive(){ea();[523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>tone(f,.18,'sine',.09),i*75))}
+
+// BGM
+class BGM{
+  constructor(){this.on=false;this.t=null;this.i=0;this.dram=false}
+  start(){ea();this.on=true;this.i=0;this._loop()}
+  stop(){this.on=false;if(this.t)clearTimeout(this.t)}
+  dramatic(v){this.dram=v}
+  _loop(){
+    if(!this.on||!ac)return;
+    const n=this.dram?[349,440,349,330,294,349,440,523,440,349,330,294,262,294,330,349]:[523,494,440,392,440,494,523,523,494,440,392,349,392,440,494,523];
+    const j=this.i%n.length,sp=this.dram?105:135;
+    tone(n[j],sp/1e3*1.4,'square',.03);
+    if(j%2===0)tone(n[j]/2,sp/1e3*2,'triangle',.04);
+    if(j%4===0){const b=ac.createBuffer(1,ac.sampleRate*.04,ac.sampleRate),d=b.getChannelData(0);for(let k=0;k<d.length;k++)d[k]=(Math.random()*2-1)*Math.pow(1-k/d.length,2)*.25;const s=ac.createBufferSource();s.buffer=b;const g=ac.createGain();g.gain.value=.06;s.connect(g);g.connect(ac.destination);s.start()}
+    if(j%4===2)tone(1200,.02,'square',.02);
+    this.i++;this.t=setTimeout(()=>this._loop(),sp);
+  }
+}
+const bgm=new BGM();
+
+// ===== VOICES =====
+const V={
+  pre:['よし来いよ','逃げんなよ？','準備できてる？','早く選べよｗ','おせーぞｗ','ビビってる？','まだ？','寝てんの？'],
+  cd:['いくぞ…','読むぞ…','見えてるからな…','集中しろ…'],
+  eWin:['よっしゃｗ','雑魚すぎｗ','見えてたわｗ','読み通りｗ','まだまだだなｗ','センスないなｗ'],
+  eLose:['くそ！','マジか！','今の無しだろ！','運だろｗ','次は勝つ！'],
+  rev:['まだ終わりじゃない…'],
+  revOK:['奇跡！','まだやれる！'],
+  revNG:['終わった…','また挑め…'],
+  rage:['ふざけんな！','次こそは！','許さん！'],
+  s5:['おいおい…マジかよ','ちょっと待て'],
+  s10:['バケモンかよ…','やりすぎだろ…'],
+  boss:['お前強いな…'],
+};
+function pk(a){return a[Math.floor(Math.random()*a.length)]}
+
+// ===== CONSTANTS =====
+const DIRS=['up','down','left','right'];
+const DA={up:'↑',down:'↓',left:'←',right:'→'};
+const RPS=['rock','scissors','paper'];
+const RPS_E={rock:'✊',scissors:'✌️',paper:'🖐️'};
+// rock>scissors, scissors>paper, paper>rock
+function rpsWinner(a,b){
+  if(a===b)return'draw';
+  if((a==='rock'&&b==='scissors')||(a==='scissors'&&b==='paper')||(a==='paper'&&b==='rock'))return'a';
+  return'b';
+}
+
+// ===== STATE =====
+let S={lv:1,streak:0,maxStreak:0,wins:0,losses:0,revUsed:false,eName:'ただのたつや',eLoseStreak:0,hist:[],secretOK:false,titleOK:false};
+let timerInt,timerVal;
+
+// ===== DOM =====
+const $=id=>document.getElementById(id);
+const charImg=$('char-img'),talk=$('talk'),dirShow=$('dir-show'),blinkOv=$('blink-ov');
+const promptText=$('prompt-text'),rpsGrid=$('rps-grid'),dirGrid=$('dir-grid');
+const rpsBtns=document.querySelectorAll('#rps-grid .rps-btn');
+const dirBtns=document.querySelectorAll('.dir-btn');
+
+// ===== HELPERS =====
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+function setNormal(){charImg.src='img/normal.png';charImg.className='idle'}
+function setWin(){charImg.src='img/normal.png';charImg.className='win-a'}
+function setLose(){charImg.src='img/lose.png';charImg.className='lose-a'}
+function setThink(){charImg.src='img/normal.png';charImg.className='think'}
+function showTalk(t){talk.textContent=t;talk.classList.add('show')}
+function hideTalk(){talk.classList.remove('show')}
+function flash(){const e=$('flash');e.classList.add('on');setTimeout(()=>e.classList.remove('on'),100)}
+function shake(){$('game-screen').classList.add('screen-shake');setTimeout(()=>$('game-screen').classList.remove('screen-shake'),300)}
+function confetti(){const c=$('confetti-c'),cols=['#ffe033','#ff3344','#33ff66','#3366ff','#ff9900','#ff33ff','#33ffff'];for(let i=0;i<50;i++){const d=document.createElement('div');d.className='conf';d.style.left=Math.random()*100+'%';d.style.background=cols[Math.floor(Math.random()*cols.length)];d.style.width=(5+Math.random()*10)+'px';d.style.height=(5+Math.random()*10)+'px';d.style.borderRadius=Math.random()>.5?'50%':'0';d.style.animationDuration=(1.5+Math.random()*2)+'s';d.style.animationDelay=(Math.random()*.5)+'s';c.appendChild(d);setTimeout(()=>d.remove(),4000)}}
+function updateHUD(){$('lv-val').textContent=S.lv;$('streak-val').textContent=S.streak;$('hp-bar').style.width=Math.min(S.lv/100*100,100)+'%';if(S.lv>90)bgm.dramatic(true)}
+function hideAllOv(){['rps-ov','cd-ov','result-ov','revival-ov','go-ov'].forEach(id=>$(id).classList.remove('active'))}
+function showRole(role){$('role-bar').style.display='block';const t=$('role-tag');t.className=role;t.textContent=role==='pointer'?'👉 YOU：指す側':'👀 YOU：向く側'}
+function hideRole(){$('role-bar').style.display='none'}
+
+// Blink timer
+setInterval(()=>{if($('game-screen').classList.contains('active')&&Math.random()<.3){blinkOv.classList.add('blink');setTimeout(()=>blinkOv.classList.remove('blink'),150)}},3000);
+
+// ===== WIN RATE BY LEVEL =====
+function getPlayerWinRate(){
+  const lv=S.lv;
+  if(lv>=100)return .25; // secret boss
+  if(lv<=10)return .80;
+  if(lv<=20)return .60;
+  // 21-99: interpolate from 55% down to 30%
+  return .55 - ((lv-21)/(99-21)) * .25;
+}
+
+// ===== GAME FLOW =====
+
+// START
+$('start-btn').addEventListener('click',()=>{
+  ea();sfxClick();
+  S.eName=$('nick-input').value.trim()||'ただのたつや';
+  $('e-name').textContent=S.eName;
+  S.lv=1;S.streak=0;S.maxStreak=0;S.wins=0;S.losses=0;S.revUsed=false;S.eLoseStreak=0;S.hist=[];S.secretOK=false;S.titleOK=false;
+  $('title-screen').classList.remove('active');
+  $('game-screen').classList.add('active');
+  bgm.start();
+  startMatch();
+});
+
+$('re-btn').addEventListener('click',()=>{
+  ea();sfxClick();
+  $('go-ov').classList.remove('active');
+  S.lv=1;S.streak=0;S.maxStreak=0;S.wins=0;S.losses=0;S.revUsed=false;S.eLoseStreak=0;S.hist=[];
+  bgm.stop();bgm.dramatic(false);bgm.start();
+  startMatch();
+});
+
+// ===== MATCH = one level =====
+// A match consists of rounds. Each round: RPS → point/look → check.
+// Match ends when pointer wins (directions match).
+
+async function startMatch(){
+  updateHUD();setNormal();hideTalk();hideAllOv();hideRole();
+  dirShow.classList.remove('show');
+  dirGrid.style.display='none';rpsGrid.style.display='none';
+
+  // Rage check
+  if(S.eLoseStreak>=3){
+    charImg.className='rage';
+    showTalk(pk(V.rage));
+    await sleep(1200);
+    S.eLoseStreak=0;
+    charImg.classList.remove('rage');
+  }
+
+  setNormal();
+  showTalk(pk(V.pre));
+  await sleep(1000);
+  hideTalk();
+
+  startRound();
+}
+
+// ===== ROUND = RPS + direction =====
+async function startRound(){
+  setNormal();hideTalk();hideAllOv();hideRole();
+  dirShow.classList.remove('show');
+  charImg.style.transform='';
+
+  // Show RPS phase
+  promptText.textContent='じゃんけん…';
+  promptText.classList.add('blink-t');
+  rpsGrid.style.display='flex';
+  dirGrid.style.display='none';
+
+  rpsBtns.forEach(b=>b.disabled=false);
+
+  // Start timer
+  startTimer(10,()=>{
+    // auto pick
+    const auto=pk(RPS);
+    onRPSSelect(auto);
+  });
+
+  // Feint animations for high levels
+  if(S.lv>=50){
+    const delay=1500+Math.random()*2500;
+    setTimeout(()=>{
+      if(rpsGrid.style.display==='flex'){
+        charImg.classList.add('feint');
+        setTimeout(()=>charImg.classList.remove('feint'),300);
+      }
+    },delay);
+  }
+}
+
+// Timer
+function startTimer(sec,onExpire){
+  clearInterval(timerInt);
+  timerVal=sec;
+  $('timer-num').textContent=sec;
+  $('t-prog').style.strokeDashoffset='0';
+  const circ=138.23;
+  timerInt=setInterval(()=>{
+    timerVal-=.1;
+    if(timerVal<=0){timerVal=0;clearInterval(timerInt);onExpire();return}
+    $('timer-num').textContent=Math.ceil(timerVal);
+    $('t-prog').style.strokeDashoffset=((sec-timerVal)/sec*circ)+'';
+    $('timer-num').style.color=timerVal<=3?'#f33':timerVal<=5?'#f90':'#fff';
+    $('t-prog').style.stroke=timerVal<=3?'#f33':timerVal<=5?'#f90':'#ffe033';
+  },100);
+}
+function stopTimer(){clearInterval(timerInt)}
+
+// RPS selection
+rpsBtns.forEach(btn=>{
+  function handler(e){e.preventDefault();ea();sfxClick();if(btn.disabled)return;onRPSSelect(btn.dataset.rps)}
+  btn.addEventListener('click',handler);
+  btn.addEventListener('touchstart',handler);
+});
+
+async function onRPSSelect(playerRPS){
+  rpsBtns.forEach(b=>b.disabled=true);
+  stopTimer();
+  rpsGrid.style.display='none';
+  promptText.textContent='';
+  promptText.classList.remove('blink-t');
+
+  // AI picks RPS (random - fair)
+  const aiRPS=pk(RPS);
+
+  // Show RPS overlay
+  const ov=$('rps-ov');
+  ov.classList.add('active');
+  $('rps-title').textContent='じゃんけん…';
+  $('rps-vs').textContent='';
+  $('rps-result-text').textContent='';
+  $('rps-sub').textContent='';
+
+  // Countdown: jan-ken-pon
+  setThink();
+  await sleep(600);
+  $('rps-title').textContent='じゃん…';sfxBeep();
+  await sleep(500);
+  $('rps-title').textContent='けん…';sfxBeep();
+  await sleep(500);
+  $('rps-title').textContent='ぽん！';sfxGo();
+
+  // Show hands
+  $('rps-vs').innerHTML=`<span style="font-size:50px">${RPS_E[playerRPS]}</span><span style="color:#aaa;font-size:24px">VS</span><span style="font-size:50px">${RPS_E[aiRPS]}</span>`;
+
+  const w=rpsWinner(playerRPS,aiRPS);
+  await sleep(600);
+
+  if(w==='draw'){
+    $('rps-result-text').textContent='あいこ！';
+    $('rps-sub').textContent='もう一回…';
+    setNormal();
+    await sleep(1200);
+    ov.classList.remove('active');
+    // Redo RPS
+    startRound();
+    return;
+  }
+
+  const playerIsPointer=(w==='a');
+  if(playerIsPointer){
+    $('rps-result-text').textContent='勝ち！あなたが指す側！';
+    $('rps-result-text').style.color='#ffe033';
+  }else{
+    $('rps-result-text').textContent='負け！あなたが向く側！';
+    $('rps-result-text').style.color='#ff6688';
+  }
+
+  await sleep(1400);
+  ov.classList.remove('active');
+
+  // Direction phase
+  startDirectionPhase(playerIsPointer);
+}
+
+// ===== DIRECTION PHASE =====
+async function startDirectionPhase(playerIsPointer){
+  setNormal();hideTalk();
+  dirShow.classList.remove('show');
+  charImg.style.transform='';
+
+  showRole(playerIsPointer?'pointer':'looker');
+
+  if(playerIsPointer){
+    promptText.textContent='👉 どっち指す？';
+  }else{
+    promptText.textContent='👀 どっち向く？';
+  }
+  promptText.classList.add('blink-t');
+
+  dirGrid.style.display='grid';
+  dirBtns.forEach(b=>b.disabled=false);
+
+  // Feint for high levels during direction
+  if(S.lv>=30){
+    for(let f=0;f<(S.lv>=70?2:1);f++){
+      setTimeout(()=>{
+        if(dirGrid.style.display==='grid'){
+          charImg.classList.add('feint');
+          const fd=pk(DIRS);
+          dirShow.textContent=DA[fd];
+          dirShow.classList.add('show');
+          setTimeout(()=>{charImg.classList.remove('feint');dirShow.classList.remove('show')},200);
+        }
+      },800+f*1200+Math.random()*800);
+    }
+  }
+
+  // Double feint for lv90+
+  if(S.lv>=90){
+    setTimeout(()=>{
+      if(dirGrid.style.display!=='grid')return;
+      charImg.classList.add('feint');
+      const fd1=pk(DIRS);
+      dirShow.textContent=DA[fd1];dirShow.classList.add('show');
+      setTimeout(()=>{
+        dirShow.classList.remove('show');
+        setTimeout(()=>{
+          const fd2=pk(DIRS);
+          dirShow.textContent=DA[fd2];dirShow.classList.add('show');
+          setTimeout(()=>{charImg.classList.remove('feint');dirShow.classList.remove('show')},200);
+        },100);
+      },150);
+    },2500+Math.random()*1500);
+  }
+
+  startTimer(10,()=>{
+    const auto=pk(DIRS);
+    onDirSelect(auto,playerIsPointer);
+  });
+}
+
+dirBtns.forEach(btn=>{
+  function handler(e){e.preventDefault();ea();sfxClick();if(btn.disabled)return;
+    const pip=$('role-tag').classList.contains('pointer');
+    onDirSelect(btn.dataset.dir,pip);
+  }
+  btn.addEventListener('click',handler);
+  btn.addEventListener('touchstart',handler);
+});
+
+async function onDirSelect(playerDir,playerIsPointer){
+  dirBtns.forEach(b=>b.disabled=true);
+  stopTimer();
+  dirGrid.style.display='none';
+  promptText.textContent='';
+  promptText.classList.remove('blink-t');
+  hideRole();
+
+  S.hist.push(playerDir);
+  if(S.hist.length>20)S.hist.shift();
+
+  // AI picks direction based on win rate
+  const aiDir=getAIDir(playerDir,playerIsPointer);
+
+  // Countdown
+  await runCountdown();
+
+  // Show result
+  showMatchResult(playerDir,aiDir,playerIsPointer);
+}
+
+function getAIDir(playerDir,playerIsPointer){
+  const wr=getPlayerWinRate();
+  const lv=S.lv;
+
+  // Pattern learning for high levels
+  let predicted=null;
+  if(lv>=70 && S.hist.length>3){
+    const rate=lv>=100?.40:0.15;
+    if(Math.random()<rate){
+      // Predict most common
+      const recent=S.hist.slice(-10);
+      const cnt={};
+      recent.forEach(d=>cnt[d]=(cnt[d]||0)+1);
+      let mx=0,md=null;
+      for(const d of DIRS)if((cnt[d]||0)>mx){mx=cnt[d];md=d}
+      predicted=md;
+    }
+  }
+
+  if(playerIsPointer){
+    // Player points, AI looks. Player wins if same direction.
+    // So AI should MATCH player's dir with probability = wr (player win rate)
+    // But AI doesn't know player's choice. AI picks randomly,
+    // but we adjust the probability by making AI pick player's dir at rate wr.
+    if(predicted && Math.random()<0.5){
+      // Use prediction to AVOID matching (make it harder)
+      const others=DIRS.filter(d=>d!==predicted);
+      return Math.random()<(1-wr)?pk(others):predicted;
+    }
+    // Weighted: match = wr chance
+    if(Math.random()<wr){
+      return playerDir; // same = player wins
+    }else{
+      const others=DIRS.filter(d=>d!==playerDir);
+      return pk(others);
+    }
+  }else{
+    // AI points, player looks. AI wins if same direction.
+    // Player wins if DIFFERENT. So AI should NOT match with probability = wr (player win rate)
+    if(predicted && Math.random()<0.5){
+      // Use prediction to TRY to match player's dir (make it harder for player)
+      return Math.random()<(1-wr)?predicted:pk(DIRS.filter(d=>d!==predicted));
+    }
+    // Weighted: AI picks same as player with (1-wr) chance
+    if(Math.random()<(1-wr)){
+      return playerDir; // same = AI wins (player loses)
+    }else{
+      const others=DIRS.filter(d=>d!==playerDir);
+      return pk(others);
+    }
+  }
+}
+
+async function runCountdown(){
+  const ov=$('cd-ov');
+  ov.classList.add('active');
+  $('cd-sub').textContent=pk(V.cd);
+  setThink();
+
+  for(const c of ['3','2','1','GO!']){
+    $('cd-text').textContent=c;
+    $('cd-text').className=c==='GO!'?'pop':'pop';
+    $('cd-text').style.color=c==='GO!'?'#ff3344':'#ffe033';
+    void $('cd-text').offsetWidth;
+    $('cd-text').classList.add('pop');
+    if(c==='GO!')sfxGo();else sfxBeep();
+    await sleep(c==='GO!'?380:550);
+  }
+  $('cd-text').style.color='#ffe033';
+  ov.classList.remove('active');
+}
+
+async function showMatchResult(playerDir,aiDir,playerIsPointer){
+  const match=(playerDir===aiDir);
+
+  // Show AI direction on character
+  dirShow.textContent=DA[aiDir];
+  dirShow.classList.add('show');
+  const rot={up:'translateY(-10px)',down:'translateY(10px)',left:'translateX(-14px) rotate(-10deg)',right:'translateX(14px) rotate(10deg)'};
+  charImg.style.transform=rot[aiDir];
+
+  await sleep(300);
+
+  const ov=$('result-ov');
+  ov.classList.add('active');
+
+  let playerWins;
+  let pointerLabel,lookerLabel;
+
+  if(playerIsPointer){
+    pointerLabel='あなた';lookerLabel=S.eName;
+    // Player pointed, AI looked. Match = player wins
+    playerWins=match;
+    $('res-detail').textContent=`👉 ${pointerLabel}: ${DA[playerDir]}　👀 ${lookerLabel}: ${DA[aiDir]}`;
+  }else{
+    pointerLabel=S.eName;lookerLabel='あなた';
+    // AI pointed, player looked. Match = AI wins (player loses)
+    playerWins=!match;
+    $('res-detail').textContent=`👉 ${pointerLabel}: ${DA[aiDir]}　👀 ${lookerLabel}: ${DA[playerDir]}`;
+  }
+
+  if(match){
+    // Directions matched → POINTER wins
+    if(playerIsPointer){
+      // Player wins the match
+      $('res-text').textContent='WIN!!';
+      $('res-text').className='win';
+      $('res-voice').textContent=`「${pk(V.eLose)}」`;
+      setLose();sfxWin();flash();shake();
+
+      S.streak++;S.wins++;S.eLoseStreak++;
+      if(S.streak>S.maxStreak)S.maxStreak=S.streak;
+
+      // Streak bonuses
+      if(S.streak===3)$('res-detail').textContent+=' ⚡SPEED!';
+      if(S.streak===5){$('res-voice').textContent=`「${pk(V.s5)}」`;sfxCheer()}
+      if(S.streak===10){$('res-voice').textContent=`「${pk(V.s10)}」`;confetti();sfxCheer()}
+      if(S.streak>=15&&!S.secretOK)S.secretOK=true;
+      if(Math.random()<.1)setTimeout(sfxCheer,400);
+      if(S.lv>=100)$('res-voice').textContent=`「${pk(V.boss)}」`;
+
+      await sleep(2200);
+      dirShow.classList.remove('show');charImg.style.transform='';
+      ov.classList.remove('active');
+
+      // Next level
+      S.lv++;
+      if(S.lv>99&&S.secretOK){S.lv=100}
+      else if(S.lv>99&&!S.secretOK){showGameOver(true);return}
+      if(S.lv>100){showGameOver(true);return}
+      startMatch();
+    }else{
+      // AI wins the match (AI was pointer, directions matched)
+      $('res-text').textContent='LOSE...';
+      $('res-text').className='lose';
+      $('res-voice').textContent=`「${pk(V.eWin)}」`;
+      setWin();sfxLose();
+      S.streak=0;S.losses++;S.eLoseStreak=0;
+
+      await sleep(2200);
+      dirShow.classList.remove('show');charImg.style.transform='';
+      ov.classList.remove('active');
+
+      if(!S.revUsed){startRevival()}else{showGameOver(false)}
+    }
+  }else{
+    // Directions different → no one wins this round, continue match
+    $('res-text').textContent='セーフ！';
+    $('res-text').className='';
+    $('res-text').style.color='#66bbff';
+    if(playerIsPointer){
+      $('res-voice').textContent=`「${pk(V.eLose.concat(['ふっ…','甘いな']))}」`;
+      setWin(); // enemy dodged, smug
+    }else{
+      $('res-voice').textContent=`「${pk(['くっ…','惜しい！','逃げやがった'])}」`;
+      setNormal();
+    }
+
+    await sleep(1500);
+    $('res-text').style.color='';
+    dirShow.classList.remove('show');charImg.style.transform='';
+    ov.classList.remove('active');
+
+    // Next round (same match, back to RPS)
+    startRound();
+  }
+}
+
+// ===== REVIVAL =====
+async function startRevival(){
+  S.revUsed=true;
+  const ov=$('revival-ov');
+  ov.classList.add('active');
+  $('rev-title').textContent=pk(V.rev);
+  $('rev-result').textContent='';
+  sfxDrum();
+
+  document.querySelectorAll('.rev-rps').forEach(btn=>{
+    btn.disabled=false;
+    const handler=function(e){
+      e.preventDefault();ea();sfxClick();
+      document.querySelectorAll('.rev-rps').forEach(b=>b.disabled=true);
+      resolveRevival(this.dataset.rps);
+    };
+    btn.onclick=handler;
+    btn.ontouchstart=handler;
+  });
+}
+
+async function resolveRevival(pChoice){
+  const win=Math.random()<.5;
+  let eChoice;
+  if(win){eChoice={rock:'scissors',scissors:'paper',paper:'rock'}[pChoice]}
+  else{eChoice={rock:'paper',scissors:'rock',paper:'scissors'}[pChoice]}
+
+  await sleep(800);
+
+  $('rev-result').textContent=`${RPS_E[pChoice]} vs ${RPS_E[eChoice]}`;
+
+  await sleep(600);
+
+  if(win){
+    $('rev-result').textContent=pk(V.revOK);
+    $('rev-result').style.color='#ffe033';
+    sfxRevive();flash();
+    await sleep(1600);
+    $('rev-result').style.color='#ffe033';
+    $('revival-ov').classList.remove('active');
+    startMatch();
+  }else{
+    $('rev-result').textContent=pk(V.revNG);
+    $('rev-result').style.color='#ff4455';
+    sfxLose();
+    await sleep(1600);
+    $('rev-result').style.color='#ffe033';
+    $('revival-ov').classList.remove('active');
+    showGameOver(false);
+  }
+}
+
+// ===== GAME OVER =====
+function showGameOver(cleared){
+  bgm.stop();
+  $('go-ov').classList.add('active');
+  const t=$('go-title');
+  if(S.lv>=100&&cleared){
+    S.titleOK=true;
+    t.textContent='🏆 称号解放：たつやマスター 🏆';
+    t.style.display='block';confetti();sfxCheer();
+  }else{t.style.display='none'}
+  $('go-stats').innerHTML=`到達レベル: <span class="v">${S.lv}</span><br>勝利数: <span class="v">${S.wins}</span><br>敗北数: <span class="v">${S.losses}</span><br>最大連勝: <span class="v">${S.maxStreak}</span>`;
+}
+
+// Prevent scroll
+document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+</script>
+</body>
+</html>
